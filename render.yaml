@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: flask-app
+    env: python
+    buildCommand: ""
+    startCommand: gunicorn Server:app
+    plan: free
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 5000
