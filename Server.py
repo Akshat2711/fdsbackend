@@ -1,40 +1,32 @@
-import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from apify_client import ApifyClient
 import os
 from dotenv import load_dotenv
+import logging
+import concurrent.futures
 
-# Load environment variables from .env file
 load_dotenv()
-
-
-
-apikey=os.getenv("apifykey")
+apikey = os.getenv("apifykey")
 app = Flask(__name__)
 CORS(app)
+
+logging.basicConfig(level=logging.INFO)
 
 @app.route('/extract-text', methods=['POST'])
 def extract_text():
     try:
-        # Retrieve the points array from the incoming JSON request
         data = request.get_json()
         points = data.get('points', [])
-
         if not points:
             return jsonify({'error': 'No points provided'}), 400
 
-        print(f"Received points: {points}")  # Log the points array
+        logging.info(f"Received points: {points}")
 
-        # Initialize the ApifyClient with your API token
         client = ApifyClient(apikey)
-
-        # List to hold job results for all points
         all_job_results = []
 
-        # Process each point
-        for point in points:
-            # Prepare the Actor input for the current point
+        def process_point(point):
             run_input = {
                 "position": point,
                 "country": "IN",
@@ -44,14 +36,10 @@ def extract_text():
                 "saveOnlyUniqueItems": True,
                 "followApplyRedirects": False,
             }
-
-            # Run the Actor and wait for it to finish
             run = client.actor("hMvNSpz3JnHgl5jkh").call(run_input=run_input)
-
-            # Fetch and process Actor results for the current point
             job_results = []
             for item in client.dataset(run["defaultDatasetId"]).iterate_items():
-                content = [
+                job_results.append([
                     item['positionName'],
                     item['salary'],
                     item['jobType'],
@@ -60,14 +48,14 @@ def extract_text():
                     item['rating'],
                     item['description'],
                     item['externalApplyLink'],
-                ]
-                job_results.append(content)
+                ])
+            return job_results
 
-            # Append job results for the current point to the overall results
-            all_job_results.extend(job_results)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = list(executor.map(process_point, points))
+            for job_results in results:
+                all_job_results.extend(job_results)
 
-        # Return all job results combined with the points
-        print(all_job_results)
         return jsonify({'points_received': points, 'job_results': all_job_results}), 200
 
     except Exception as e:
@@ -76,8 +64,3 @@ def extract_text():
 
 if __name__ == '__main__':
     app.run(debug=False, port=5000)
-
-
-
-
-
