@@ -51,10 +51,10 @@ def extract_text():
             return job_results
 
         # Process in batches
-        batch_size = 5  # Adjust batch size as needed
+        batch_size = 2  # Start with a smaller batch size
         for i in range(0, len(points), batch_size):
             batch = points[i:i + batch_size]
-            with concurrent.futures.ThreadPoolExecutor() as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:  # Limit concurrent threads
                 results = list(executor.map(process_point, batch))
                 for job_results in results:
                     all_job_results.extend(job_results)
@@ -64,6 +64,7 @@ def extract_text():
     except Exception as e:
         logging.error(f"Error processing request: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'details': str(e)}), 500
+
 
 
 if __name__ == '__main__':
