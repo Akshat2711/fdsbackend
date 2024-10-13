@@ -3,7 +3,7 @@ services:
     name: flask-app
     env: python
     buildCommand: ""
-    startCommand: gunicorn Server:app
+    startCommand: gunicorn --timeout 120 --workers 2 Server:app  # Adjust timeout and worker count
     plan: free
     envVars:
       - key: FLASK_ENV
