@@ -11,7 +11,8 @@ apikey = os.getenv("apifykey")
 
 # Initialize Flask app and logging
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://career-bridge-sooty.vercel.app"])
+
 logging.basicConfig(level=logging.INFO)  # Set logging level to INFO for detailed logs
 
 @app.route('/extract-text', methods=['POST'])
@@ -88,7 +89,7 @@ def extract_text():
             all_job_results.extend(job_results)
 
             # If you only want to process the first point, you can uncomment the break statement
-            break
+            break#so that only request is made
 
         # Return all job results combined with the points
         logging.info(f"Final job results: {all_job_results}")
