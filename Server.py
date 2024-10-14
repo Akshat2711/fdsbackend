@@ -88,7 +88,7 @@ def extract_text():
             all_job_results.extend(job_results)
 
             # If you only want to process the first point, you can uncomment the break statement
-            # break
+            break
 
         # Return all job results combined with the points
         logging.info(f"Final job results: {all_job_results}")
