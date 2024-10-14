@@ -11,7 +11,8 @@ apikey = os.getenv("apifykey")
 
 # Initialize Flask app and logging
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://career-bridge-psi.vercel.app"])
+
 logging.basicConfig(level=logging.INFO)  # Set logging level to INFO for detailed logs
 
 @app.route('/extract-text', methods=['POST'])
