@@ -4,33 +4,36 @@ from apify_client import ApifyClient
 import os
 from dotenv import load_dotenv
 import logging
-import concurrent.futures
-import gc  # Garbage collector for manual memory management
-import psutil  # For memory monitoring
-
 # Load environment variables
 load_dotenv()
 apikey = os.getenv("apifykey")
+
+
+
 app = Flask(__name__)
 CORS(app)
-
-logging.basicConfig(level=logging.INFO)
 
 @app.route('/extract-text', methods=['POST'])
 def extract_text():
     try:
-        # Parse request data
+        # Retrieve the points array from the incoming JSON request
         data = request.get_json()
         points = data.get('points', [])
+
         if not points:
             return jsonify({'error': 'No points provided'}), 400
 
-        logging.info(f"Received points: {points}")
+        print(f"Received points: {points}")  # Log the points array
+
+        # Initialize the ApifyClient with your API token
         client = ApifyClient(apikey)
+
+        # List to hold job results for all points
         all_job_results = []
 
-        # Function to process each point
-        def process_point(point):
+        # Process each point
+        for point in points:
+            # Prepare the Actor input for the current point
             run_input = {
                 "position": point,
                 "country": "IN",
@@ -40,38 +43,31 @@ def extract_text():
                 "saveOnlyUniqueItems": True,
                 "followApplyRedirects": False,
             }
+
+            # Run the Actor and wait for it to finish
             run = client.actor("hMvNSpz3JnHgl5jkh").call(run_input=run_input)
+
+            # Fetch and process Actor results for the current point
             job_results = []
-            # Fetch only 100 items at a time (you can adjust this limit)
-            for item in client.dataset(run["defaultDatasetId"]).iterate_items(limit=100):
-                job_results.append([
-                    item.get('positionName', 'N/A'),
-                    item.get('salary', 'N/A'),
-                    item.get('jobType', 'N/A'),
-                    item.get('company', 'N/A'),
-                    item.get('location', 'N/A'),
-                    item.get('rating', 'N/A'),
-                    item.get('description', 'N/A'),
-                    item.get('externalApplyLink', 'N/A'),
-                ])
-            return job_results
+            for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+                content = [
+                    item['positionName'],
+                    item['salary'],
+                    item['jobType'],
+                    item['company'],
+                    item['location'],
+                    item['rating'],
+                    item['description'],
+                    item['externalApplyLink'],
+                ]
+                job_results.append(content)
 
-        # Process in smaller batches
-        batch_size = 1  # Reduced batch size to minimize memory load
-        for i in range(0, len(points), batch_size):
-            batch = points[i:i + batch_size]
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:  # Reduced to 1 thread
-                results = list(executor.map(process_point, batch))
-                for job_results in results:
-                    all_job_results.extend(job_results)
+            # Append job results for the current point to the overall results
+            all_job_results.extend(job_results)
+            break
 
-            # Manually trigger garbage collection to free memory
-            gc.collect()
-
-            # Monitor memory usage after each batch
-            memory = psutil.virtual_memory()
-            logging.info(f"Memory usage after batch {i//batch_size + 1}: {memory.percent}%")
-
+        # Return all job results combined with the points
+        print(all_job_results)
         return jsonify({'points_received': points, 'job_results': all_job_results}), 200
 
     except Exception as e:
@@ -79,4 +75,4 @@ def extract_text():
         return jsonify({'error': 'Internal Server Error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=False, port=5000)
+    app.run(debug=True, port=5000)
