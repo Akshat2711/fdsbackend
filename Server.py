@@ -26,7 +26,7 @@ def extract_text():
             logging.warning("No points provided in the request")
             return jsonify({'error': 'No points provided'}), 400
 
-        logging.info(f"Received points: {points}")  # Log the points array
+        logging.info(f"Received points: {points}")  # Log the points arra
 
         # Initialize the ApifyClient with your API token
         if not apikey:
